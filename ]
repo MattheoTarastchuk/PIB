@@ -1,15 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.metrics import auc
-from sklearn.metrics import precision_recall_curve
-from sklearn.model_selection import train_test_split
 arquivos = ["512_yolov4_5000_dados_celulas.txt", "608_yolov4_5000_dados_celulas.txt", "800_yolov4_5000_dados_celulas.txt"]
 dados = {}
 for nome_arquivo in arquivos:
     Recalls = []
     Precisoes = []
     F1 = []
-    Threshold = []
     with open(nome_arquivo, "r") as arquivo:
         for linha in arquivo:
             if "conf_thresh" in linha:
@@ -22,33 +18,32 @@ for nome_arquivo in arquivos:
                 TP = int(partes[1].split("=")[1].strip())
                 FP = int(partes[2].split("=")[1].strip())
                 FN = int(partes[3].split("=")[1].strip())
-                Threshold.append(threshold)
                 #print(threshold, TP, FP, FN)
-                if TP + FN != 0 and TP + FP !=0:
+                if TP != 0 or TP + FN != 0:
                     Recall = TP/(TP+FN)
-                    Precisao = TP/(TP + FP)
-
                     Recalls.append(Recall)
+                if TP != 0 or TP + FP != 0:
+                    Precisao = TP/(TP + FP)
                     Precisoes.append(Precisao)
-                    if Precisao + Recall != 0:
-                        F1_score = (2*(Precisao*Recall))/(Precisao + Recall)
-                        F1.append(F1_score)
-                    dados[nome_arquivo] = (Recalls, Precisoes, Threshold, F1)
+                if Precisao + Recall != 0:
+                    F1_score = (2*(Precisao*Recall))/(Precisao + Recall)
+                    F1.append(F1_score)
+                print(Recall)
+                #print(Precisao)
+               # print(F1_score)
+                dados[nome_arquivo] = (Recalls, Precisoes, threshold)
 for nome in dados:
-    Recalls, Precisoes, threshold, F1 = dados[nome]
-    Recalls, Precisoes = zip(*sorted(zip(Recalls,Precisoes)))
-    Recalls = np.array(Recalls)
-    Precisoes = np.array(Precisoes)
-
-    Recalls = np.concatenate(([0], Recalls, [1]))
-    Precisoes = np.concatenate(([1], Precisoes, [0]))
-    ap = np.trapz(Precisoes, Recalls)
-    plt.plot(Recalls, Precisoes, label=nome)
-    melhor_f1 = max(F1)
-    indice = F1.index(melhor_f1)
-    melhor_thre = Threshold[indice]
-    print(nome,"->", ap,",", melhor_f1,",", melhor_thre)
-
+    recalls, precisoes, threshold = dados[nome]
+    plt.plot(recalls, precisoes, label=nome)
+    recalls, precisoes = zip(*sorted(zip(recalls,precisoes)))
+    recalls = np.array(recalls)
+    precisoes = np.array(precisoes)
+    if (recalls[0] > recalls[1]):
+            recalls = recalls[::-1]
+            precisoes = precisoes[::-1]
+            print(recalls)
+    ap = np.trapz(precisoes, recalls)
+    print(nome,ap)
 plt.xlabel("Recall") 
 plt.ylabel("Precision") 
 plt.title("Curva Precision-Recall")
